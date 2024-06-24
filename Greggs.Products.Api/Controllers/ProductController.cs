@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Greggs.Products.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using MediatR;
+using System.Threading.Tasks;
+using Greggs.Products.Api.Queries;
 
 namespace Greggs.Products.Api.Controllers;
 
@@ -11,30 +12,25 @@ namespace Greggs.Products.Api.Controllers;
 [Route("[controller]")]
 public class ProductController : ControllerBase
 {
-    private static readonly string[] Products = new[]
-    {
-        "Sausage Roll", "Vegan Sausage Roll", "Steak Bake", "Yum Yum", "Pink Jammie"
-    };
+    private readonly IMediator _mediator;
 
     private readonly ILogger<ProductController> _logger;
 
-    public ProductController(ILogger<ProductController> logger)
+    private const string DEFAULT_CURRENCY = "GBP";
+
+    public ProductController(
+        ILogger<ProductController> logger, 
+        IMediator mediator)
     {
         _logger = logger;
+        _mediator = mediator;
     }
 
     [HttpGet]
-    public IEnumerable<Product> Get(int pageStart = 0, int pageSize = 5)
+    public async Task<IEnumerable<ConvertedProduct>> Get(int pageStart = 0, int pageSize = 5, string currency = DEFAULT_CURRENCY)
     {
-        if (pageSize > Products.Length)
-            pageSize = Products.Length;
+        _logger.LogInformation($"Requested start:{pageSize}, size:{pageSize}");
 
-        var rng = new Random();
-        return Enumerable.Range(1, pageSize).Select(index => new Product
-            {
-                PriceInPounds = rng.Next(0, 10),
-                Name = Products[rng.Next(Products.Length)]
-            })
-            .ToArray();
+        return await _mediator.Send(new GetAllProductsQuery(pageStart, pageSize, currency));
     }
 }
